@@ -1,28 +1,27 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
+import axios from "axios";
 
-export default function Meme(props) {
+export default function Meme() {
   const [meme, setMeme] = useState({
     topText: "",
     bottomText: "",
-    randomImage: "http://i.imgflip.com/1bij.jpg",
   });
+  const [query, setQuery] = useState("");
+  const [searchResult, setSearchResult] = useState([]);
+  const [randomIndex, setRandomIndex] = useState(0);
 
-  const [allMemes, setAllMemes] = useState([]);
-
-  useEffect(() => {
-    fetch("https://api.imgflip.com/get_memes")
-      .then((response) => response.json())
-      .then((data) => setAllMemes(data.data.memes));
-  }, []);
-
-  function getMemeImage() {
-    const randomNumber = Math.floor(Math.random() * allMemes.length);
-    const url = allMemes[randomNumber].url;
-    setMeme((prevMeme) => ({
-      ...prevMeme,
-      randomImage: url,
-    }));
-  }
+  const handleSearch = async () => {
+    try {
+      const response = await axios.get(`http://localhost:3001/home/${query}`);
+      setSearchResult(response.data);
+      console.log(response.data.length);
+      response.data.length > 1
+        ? setRandomIndex(Math.floor(Math.random() * response.data.length))
+        : setRandomIndex(100);
+    } catch (error) {
+      console.error("Error searching for images:", error);
+    }
+  };
 
   function handleChange(event) {
     const { name, value } = event.target;
@@ -39,6 +38,16 @@ export default function Meme(props) {
       <div className="form">
         <input
           type="text"
+          id="search-input"
+          placeholder="Enter search query"
+          value={query}
+          onInput={(e) => setQuery(e.target.value)}
+        />
+        <button onClick={handleSearch} className="search--button">
+          Search
+        </button>
+        <input
+          type="text"
           name="topText"
           placeholder="Top text"
           className="form--input"
@@ -53,15 +62,32 @@ export default function Meme(props) {
           value={FormData.bottomText}
           onChange={handleChange}
         />
-        <button className="form--button" onClick={getMemeImage}>
-          Get a new meme image
-        </button>
       </div>
-      <div className="meme">
-        <img src={meme.randomImage} className="meme--image" alt="meme" />
-        <h2 className="meme--text top">{meme.topText}</h2>
-        <h2 className="meme--text bottom">{meme.bottomText}</h2>
-      </div>
+      {searchResult.length > 0 ? (
+        <div className="meme">
+          {searchResult.length > 1 ? (
+            <img
+              className="meme--image"
+              key={searchResult[randomIndex].public_id}
+              src={searchResult[randomIndex].secure_url}
+              alt={searchResult[randomIndex].public_id}
+            />
+          ) : (
+            <img
+              className="meme--image"
+              key={searchResult[0].public_id}
+              src={searchResult[0].secure_url}
+              alt={searchResult[0].public_id}
+            />
+          )}
+          <h2 className="meme--text top">{meme.topText}</h2>
+          <h2 className="meme--text bottom">{meme.bottomText}</h2>
+        </div>
+      ) : (
+        <p className="image--text">
+          Waiting for image.. please enter your search query
+        </p>
+      )}
     </main>
   );
 }
